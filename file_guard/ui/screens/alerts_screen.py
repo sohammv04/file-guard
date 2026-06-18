@@ -3,6 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from PyQt6.QtCore import Qt
+from PyQt6.QtGui import QFont
 from PyQt6.QtWidgets import (
     QComboBox,
     QFrame,
@@ -59,11 +60,22 @@ class AlertsScreen(QWidget):
         layout.addWidget(ScreenHeader("Alerts & Live Monitoring", "Full change feed with filters and controls."))
 
         filters = QHBoxLayout()
+
+        self.type_filter = QComboBox()
+        self.type_filter.setFont(QFont("Segoe UI", 16))
+        self.type_filter.setFixedWidth(200)
         self.type_filter.addItems(["All Types", "modified", "deleted", "added"])
+
         self.risk_filter = QComboBox()
+        self.risk_filter.setFont(QFont("Segoe UI", 16))
+        self.risk_filter.setFixedWidth(200)
         self.risk_filter.addItems(["All Risks", "Low Risk", "Medium Risk", "High Risk"])
+
         self.sort_filter = QComboBox()
+        self.sort_filter.setFont(QFont("Segoe UI", 16))
+        self.sort_filter.setFixedWidth(200)
         self.sort_filter.addItems(["Newest First", "Oldest First", "Risk: High to Low"])
+
         for combo in [self.type_filter, self.risk_filter, self.sort_filter]:
             combo.currentIndexChanged.connect(self.refresh)
             filters.addWidget(combo)
