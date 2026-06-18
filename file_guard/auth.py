@@ -1,12 +1,13 @@
 from __future__ import annotations
 
 import hashlib
+import re
 import secrets
 from pathlib import Path
 
 from .config import AUTH_FILE, PIN_MIN_LENGTH
-from .real_otp_service import OTPServiceError, RealOTPService
 from .storage import load_json, save_json
+from .totp_service import TOTPService
 
 
 class AuthError(ValueError):
@@ -16,23 +17,26 @@ class AuthError(ValueError):
 class AuthManager:
     def __init__(self, auth_file: Path = AUTH_FILE) -> None:
         self.auth_file = auth_file
-        self.otp_service = RealOTPService()
-        self._session_info: str | None = None
+        self._session_active = False
 
     def is_registered(self) -> bool:
         data = load_json(self.auth_file, {})
-        return bool(data.get("mobile")) and bool(data.get("pin_hash"))
+        return bool(data.get("email")) and bool(data.get("pin_hash")) and bool(data.get("totp_secret"))
 
-    def register(self, mobile: str, pin: str) -> None:
-        mobile = self._validate_mobile(mobile)
+    def register(self, email: str, pin: str) -> str:
+        """Register user. Returns the TOTP provisioning URI for QR code display."""
+        email = self._validate_email(email)
         self._validate_pin(pin)
         salt = secrets.token_hex(16)
+        totp_secret = TOTPService.generate_secret()
         data = {
-            "mobile": mobile,
+            "email": email,
             "pin_salt": salt,
             "pin_hash": self._hash_pin(pin, salt),
+            "totp_secret": totp_secret,
         }
         save_json(self.auth_file, data)
+        return TOTPService.get_provisioning_uri(totp_secret, email)
 
     def verify_pin(self, pin: str) -> bool:
         data = load_json(self.auth_file, {})
@@ -43,34 +47,47 @@ class AuthManager:
         return secrets.compare_digest(self._hash_pin(pin, salt), expected)
 
     def send_otp(self) -> None:
-        """Send real SMS OTP to the registered mobile number via Firebase."""
+        """TOTP: nothing to send — the authenticator app generates codes continuously."""
         if not self.is_registered():
             raise AuthError("Register before requesting an OTP.")
-        mobile = self.get_mobile()
-        try:
-            self._session_info = self.otp_service.send_sms_otp(mobile)
-        except OTPServiceError as error:
-            raise AuthError(str(error)) from error
+        self._session_active = True
 
     def verify_otp(self, otp: str) -> bool:
-        if not self._session_info:
+        """Verify a TOTP code from the authenticator app."""
+        if not self._session_active:
             return False
-        mobile = self.get_mobile()
-        return self.otp_service.verify_sms_otp(mobile, self._session_info, otp)
+        secret = self.get_totp_secret()
+        if not secret:
+            return False
+        return TOTPService.verify(secret, otp)
 
     def reset_pin(self, otp: str, new_pin: str) -> None:
         if not self.verify_otp(otp):
-            raise AuthError("Invalid or expired OTP.")
+            raise AuthError("Invalid or expired OTP. Check your authenticator app.")
         self._validate_pin(new_pin)
         data = load_json(self.auth_file, {})
         salt = secrets.token_hex(16)
         data["pin_salt"] = salt
         data["pin_hash"] = self._hash_pin(new_pin, salt)
         save_json(self.auth_file, data)
-        self._session_info = None
+        self._session_active = False
+
+    def get_email(self) -> str:
+        return load_json(self.auth_file, {}).get("email", "")
 
     def get_mobile(self) -> str:
-        return load_json(self.auth_file, {}).get("mobile", "")
+        return self.get_email()
+
+    def get_totp_secret(self) -> str:
+        return load_json(self.auth_file, {}).get("totp_secret", "")
+
+    def get_totp_uri(self) -> str:
+        """Return the provisioning URI for re-displaying the QR code."""
+        secret = self.get_totp_secret()
+        email = self.get_email()
+        if not secret or not email:
+            return ""
+        return TOTPService.get_provisioning_uri(secret, email)
 
     def change_pin(self, current_pin: str, new_pin: str) -> None:
         if not self.verify_pin(current_pin):
@@ -82,20 +99,13 @@ class AuthManager:
         data["pin_hash"] = self._hash_pin(new_pin, salt)
         save_json(self.auth_file, data)
 
-    def update_mobile(self, pin: str, new_mobile: str) -> None:
-        if not self.verify_pin(pin):
-            raise AuthError("PIN verification failed.")
-        mobile = self._validate_mobile(new_mobile)
-        data = load_json(self.auth_file, {})
-        data["mobile"] = mobile
-        save_json(self.auth_file, data)
-
     @staticmethod
-    def _validate_mobile(mobile: str) -> str:
-        clean_mobile = "".join(character for character in mobile if character.isdigit())
-        if len(clean_mobile) < 10:
-            raise AuthError("Enter a valid mobile number with at least 10 digits.")
-        return clean_mobile
+    def _validate_email(email: str) -> str:
+        email = email.strip().lower()
+        pattern = r"^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$"
+        if not re.match(pattern, email):
+            raise AuthError("Enter a valid email address.")
+        return email
 
     @staticmethod
     def _validate_pin(pin: str) -> None:

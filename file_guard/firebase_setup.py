@@ -1,12 +1,13 @@
 from __future__ import annotations
 
 import os
+from pathlib import Path
 
 import firebase_admin
 from dotenv import load_dotenv
 from firebase_admin import credentials
 
-load_dotenv()
+load_dotenv(dotenv_path=Path(__file__).resolve().parent.parent / ".env", override=True)
 
 _initialized = False
 

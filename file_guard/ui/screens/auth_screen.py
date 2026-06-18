@@ -1,7 +1,9 @@
 from __future__ import annotations
 
-from PyQt6.QtCore import pyqtSignal
+from PyQt6.QtCore import Qt, pyqtSignal
+from PyQt6.QtGui import QPixmap
 from PyQt6.QtWidgets import (
+    QDialog,
     QHBoxLayout,
     QLabel,
     QLineEdit,
@@ -13,9 +15,59 @@ from PyQt6.QtWidgets import (
 
 from ...auth import AuthError
 from ...config import OTP_LENGTH
+from ...totp_service import TOTPService
 from ..app_controller import AppController
 from ..otp_widget import OtpInputWidget
 from ..widgets import ScreenHeader, make_card
+
+
+class QRCodeDialog(QDialog):
+    """Dialog shown after registration — displays the TOTP QR code to scan."""
+
+    def __init__(self, provisioning_uri: str, parent: QWidget | None = None) -> None:
+        super().__init__(parent)
+        self.setWindowTitle("File Guard — Scan QR Code")
+        self.setMinimumWidth(380)
+
+        layout = QVBoxLayout(self)
+        layout.setSpacing(16)
+        layout.setContentsMargins(24, 24, 24, 24)
+
+        title = QLabel("Set Up Authenticator")
+        title.setObjectName("brandLabel")
+        title.setAlignment(Qt.AlignmentFlag.AlignCenter)
+
+        instructions = QLabel(
+            "Scan this QR code with <b>Google Authenticator</b> or any TOTP app.\n"
+            "You'll use the 6-digit code it generates to reset your PIN."
+        )
+        instructions.setWordWrap(True)
+        instructions.setAlignment(Qt.AlignmentFlag.AlignCenter)
+
+        # Generate QR code image
+        qr_label = QLabel()
+        qr_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        try:
+            png_bytes = TOTPService.generate_qr_png_bytes(provisioning_uri)
+            pixmap = QPixmap()
+            pixmap.loadFromData(png_bytes)
+            qr_label.setPixmap(pixmap.scaled(240, 240, Qt.AspectRatioMode.KeepAspectRatio))
+        except Exception:
+            qr_label.setText("Could not generate QR code.\nPlease install qrcode and Pillow.")
+
+        note = QLabel("✅ Once scanned, click Done — you won't need to scan again.")
+        note.setWordWrap(True)
+        note.setAlignment(Qt.AlignmentFlag.AlignCenter)
+
+        done_btn = QPushButton("Done — I've Scanned It")
+        done_btn.setObjectName("primaryButton")
+        done_btn.clicked.connect(self.accept)
+
+        layout.addWidget(title)
+        layout.addWidget(instructions)
+        layout.addWidget(qr_label)
+        layout.addWidget(note)
+        layout.addWidget(done_btn)
 
 
 class AuthScreen(QWidget):
@@ -40,7 +92,7 @@ class AuthScreen(QWidget):
         card_layout.addWidget(header)
 
         self.mobile_input = QLineEdit()
-        self.mobile_input.setPlaceholderText("Mobile number (10+ digits)")
+        self.mobile_input.setPlaceholderText("Email address")
         self.pin_input = QLineEdit()
         self.pin_input.setEchoMode(QLineEdit.EchoMode.Password)
         self.pin_input.setPlaceholderText("PIN")
@@ -49,10 +101,10 @@ class AuthScreen(QWidget):
         self.confirm_pin_input.setPlaceholderText("Confirm PIN")
         self.otp_widget = OtpInputWidget(OTP_LENGTH)
 
-        self.mobile_label = QLabel("Mobile Number")
+        self.mobile_label = QLabel("Email Address")
         self.pin_label = QLabel("PIN")
         self.confirm_label = QLabel("Confirm PIN")
-        self.otp_label = QLabel("OTP")
+        self.otp_label = QLabel("OTP (from Authenticator App)")
 
         for widget in [
             self.mobile_label,
@@ -69,11 +121,11 @@ class AuthScreen(QWidget):
         buttons = QHBoxLayout()
         self.register_button = QPushButton("Register")
         self.login_button = QPushButton("Sign In")
-        self.request_otp_button = QPushButton("Request OTP")
+        self.request_otp_button = QPushButton("Show QR Code")
         self.reset_pin_button = QPushButton("Reset PIN")
         self.register_button.clicked.connect(self._register)
         self.login_button.clicked.connect(self._login)
-        self.request_otp_button.clicked.connect(self._request_otp)
+        self.request_otp_button.clicked.connect(self._show_qr)
         self.reset_pin_button.clicked.connect(self._reset_pin)
         for button in [self.register_button, self.login_button, self.request_otp_button, self.reset_pin_button]:
             buttons.addWidget(button)
@@ -98,6 +150,9 @@ class AuthScreen(QWidget):
         self.login_button.setVisible(registered)
         self.request_otp_button.setVisible(registered)
         self.reset_pin_button.setVisible(registered)
+        # Hide email field after registration (not needed for login)
+        self.mobile_label.setVisible(not registered)
+        self.mobile_input.setVisible(not registered)
 
     def _register(self) -> None:
         pin = self.pin_input.text().strip()
@@ -105,11 +160,15 @@ class AuthScreen(QWidget):
             self._error("PIN values do not match.")
             return
         try:
-            self.controller.auth_manager.register(self.mobile_input.text().strip(), pin)
+            provisioning_uri = self.controller.auth_manager.register(
+                self.mobile_input.text().strip(), pin
+            )
         except AuthError as error:
             self._error(str(error))
             return
-        QMessageBox.information(self, "File Guard", "Registration complete. Sign in with your PIN.")
+        # Show QR code dialog immediately after registration
+        dlg = QRCodeDialog(provisioning_uri, self)
+        dlg.exec()
         self._sync_state()
 
     def _login(self) -> None:
@@ -118,20 +177,25 @@ class AuthScreen(QWidget):
             return
         self._error("Incorrect PIN.")
 
-    def _request_otp(self) -> None:
+    def _show_qr(self) -> None:
+        """Re-display the QR code (for rescanning the authenticator)."""
+        uri = self.controller.auth_manager.get_totp_uri()
+        if uri:
+            dlg = QRCodeDialog(uri, self)
+            dlg.exec()
+        # Also activate the OTP session so Reset PIN works
+        try:
+            self.controller.auth_manager.send_otp()
+        except AuthError:
+            pass
+
+    def _reset_pin(self) -> None:
+        # Activate OTP session if not already active
         try:
             self.controller.auth_manager.send_otp()
         except AuthError as error:
             self._error(str(error))
             return
-        QMessageBox.information(
-            self,
-            "OTP Sent",
-            "A verification code has been sent to your registered mobile number via SMS.",
-        )
-        self.otp_widget.clear_all()
-
-    def _reset_pin(self) -> None:
         try:
             self.controller.auth_manager.reset_pin(
                 self.otp_widget.value(),
