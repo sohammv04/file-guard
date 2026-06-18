@@ -21,7 +21,8 @@ from ..widgets import RiskBadge, ScreenHeader, make_card
 class AlertCard(QFrame):
     def __init__(self, entry: dict, parent: QWidget | None = None) -> None:
         super().__init__(parent)
-        self.setObjectName("card")
+        change_type = entry.get("change_type", "")
+        self.setObjectName("alertAdded" if change_type == "added" else "card")
         layout = QVBoxLayout(self)
         layout.setContentsMargins(14, 12, 14, 12)
         layout.setSpacing(6)
@@ -58,7 +59,6 @@ class AlertsScreen(QWidget):
         layout.addWidget(ScreenHeader("Alerts & Live Monitoring", "Full change feed with filters and controls."))
 
         filters = QHBoxLayout()
-        self.type_filter = QComboBox()
         self.type_filter.addItems(["All Types", "modified", "deleted", "added"])
         self.risk_filter = QComboBox()
         self.risk_filter.addItems(["All Risks", "Low Risk", "Medium Risk", "High Risk"])

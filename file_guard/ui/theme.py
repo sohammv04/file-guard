@@ -3,7 +3,7 @@ from __future__ import annotations
 _COMMON = """
 * {
     font-family: "Segoe UI", "Inter", Arial, sans-serif;
-    font-size: 10.5pt;
+    font-size: 16px;
 }
 QMainWindow, QWidget#rootWidget, QWidget#contentArea {
     background-color: %(bg)s;
@@ -14,27 +14,32 @@ QFrame#card, QFrame#statCard {
     border: 1px solid %(border)s;
     border-radius: 12px;
 }
+QFrame#alertAdded {
+    background-color: %(added_bg)s;
+    border: 1px solid %(added_border)s;
+    border-radius: 12px;
+}
 QLabel#screenTitle {
-    font-size: 20pt;
+    font-size: 24px;
     font-weight: 700;
     color: %(text)s;
 }
 QLabel#screenSubtitle, QLabel#statSubtitle {
     color: %(muted)s;
-    font-size: 10pt;
+    font-size: 16px;
 }
 QLabel#cardTitle, QLabel#statTitle {
-    font-size: 11pt;
+    font-size: 20px;
     font-weight: 600;
     color: %(muted)s;
 }
 QLabel#statValue {
-    font-size: 22pt;
+    font-size: 24px;
     font-weight: 700;
     color: %(text)s;
 }
 QLabel#brandLabel {
-    font-size: 14pt;
+    font-size: 24px;
     font-weight: 700;
     color: %(accent)s;
 }
@@ -44,6 +49,7 @@ QLineEdit, QComboBox, QTextEdit, QListWidget, QTreeView, QTableWidget {
     border: 1px solid %(border)s;
     border-radius: 8px;
     padding: 8px;
+    font-size: 18px;
     selection-background-color: %(accent)s;
 }
 QHeaderView::section {
@@ -63,6 +69,7 @@ QPushButton {
     border: none;
     border-radius: 8px;
     padding: 10px 16px;
+    font-size: 16px;
     font-weight: 600;
 }
 QPushButton:hover {
@@ -192,6 +199,8 @@ _LIGHT = {
     "nav_active": "#e0eaff",
     "pill_bg": "#e2e8f0",
     "pill_text": "#475569",
+    "added_bg": "#e3f2fd",
+    "added_border": "#64b5f6",
 }
 
 _DARK = {
@@ -210,6 +219,8 @@ _DARK = {
     "nav_active": "#1c2d41",
     "pill_bg": "#21262d",
     "pill_text": "#8b9cb3",
+    "added_bg": "#0d2137",
+    "added_border": "#1e88e5",
 }
 
 

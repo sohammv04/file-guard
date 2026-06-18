@@ -10,7 +10,7 @@ from ..auth import AuthManager
 from ..config import DEFAULT_SCAN_INTERVAL_SECONDS, SUPPORTED_HASH_ALGORITHMS
 from ..logging_utils import MonitorLogger
 from ..models import MonitoredItem
-from ..monitor import MonitorEngine
+from ..monitor_service import MonitorService
 from ..reporting import ReportGenerator
 from .monitor_worker import MonitorWorker
 
@@ -26,7 +26,7 @@ class AppController(QObject):
     def __init__(self) -> None:
         super().__init__()
         self.auth_manager = AuthManager()
-        self.monitor_engine = MonitorEngine()
+        self.monitor_service = MonitorService()
         self.monitor_logger = MonitorLogger()
         self.report_generator = ReportGenerator()
 
@@ -85,12 +85,12 @@ class AppController(QObject):
         self.data_changed.emit()
 
     def get_monitored_file_count(self) -> int:
-        baseline = self.monitor_engine.load_baseline()
-        if baseline.get("records"):
-            return len(baseline["records"])
+        count = self.monitor_service.get_file_count()
+        if count:
+            return count
         if not self.monitored_items:
             return 0
-        return len(self.monitor_engine.build_snapshot(self.monitored_items, self.algorithm))
+        return len(self.monitor_service.engine.build_snapshot(self.monitored_items, self.algorithm))
 
     def get_stats(self) -> dict:
         entries = self.monitor_logger.load_entries()
@@ -118,9 +118,9 @@ class AppController(QObject):
         if self.monitoring_state == "active":
             return "Monitoring is already active."
 
-        self.monitor_engine.save_baseline(self.monitored_items, self.algorithm)
+        self.monitor_service.initialize_monitoring(self.monitored_items, self.algorithm)
         self.monitor_thread = QThread()
-        self.monitor_worker = MonitorWorker(self.monitor_engine, DEFAULT_SCAN_INTERVAL_SECONDS)
+        self.monitor_worker = MonitorWorker(self.monitor_service.engine, DEFAULT_SCAN_INTERVAL_SECONDS)
         self.monitor_worker.moveToThread(self.monitor_thread)
 
         self.monitor_thread.started.connect(self.monitor_worker.start)

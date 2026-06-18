@@ -120,14 +120,14 @@ class AuthScreen(QWidget):
 
     def _request_otp(self) -> None:
         try:
-            otp = self.controller.auth_manager.generate_otp()
+            self.controller.auth_manager.send_otp()
         except AuthError as error:
             self._error(str(error))
             return
         QMessageBox.information(
             self,
-            "OTP Generated",
-            f"Simulated OTP for testing:\n{otp}\n\nAlso printed to console.",
+            "OTP Sent",
+            "A verification code has been sent to your registered mobile number via SMS.",
         )
         self.otp_widget.clear_all()
 

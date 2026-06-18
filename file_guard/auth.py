@@ -2,10 +2,10 @@ from __future__ import annotations
 
 import hashlib
 import secrets
-import time
 from pathlib import Path
 
-from .config import AUTH_FILE, OTP_LENGTH, PIN_MIN_LENGTH
+from .config import AUTH_FILE, PIN_MIN_LENGTH
+from .real_otp_service import OTPServiceError, RealOTPService
 from .storage import load_json, save_json
 
 
@@ -16,8 +16,8 @@ class AuthError(ValueError):
 class AuthManager:
     def __init__(self, auth_file: Path = AUTH_FILE) -> None:
         self.auth_file = auth_file
-        self._otp_code: str | None = None
-        self._otp_expiry: float | None = None
+        self.otp_service = RealOTPService()
+        self._session_info: str | None = None
 
     def is_registered(self) -> bool:
         data = load_json(self.auth_file, {})
@@ -42,23 +42,21 @@ class AuthManager:
             return False
         return secrets.compare_digest(self._hash_pin(pin, salt), expected)
 
-    def generate_otp(self) -> str:
+    def send_otp(self) -> None:
+        """Send real SMS OTP to the registered mobile number via Firebase."""
         if not self.is_registered():
             raise AuthError("Register before requesting an OTP.")
-        self._otp_code = "".join(secrets.choice("0123456789") for _ in range(OTP_LENGTH))
-        self._otp_expiry = time.time() + 300
-        mobile = load_json(self.auth_file, {}).get("mobile", "unknown")
-        print(f"[File Guard OTP] Send this OTP to {mobile}: {self._otp_code}")
-        return self._otp_code
+        mobile = self.get_mobile()
+        try:
+            self._session_info = self.otp_service.send_sms_otp(mobile)
+        except OTPServiceError as error:
+            raise AuthError(str(error)) from error
 
     def verify_otp(self, otp: str) -> bool:
-        if not self._otp_code or not self._otp_expiry:
+        if not self._session_info:
             return False
-        if time.time() > self._otp_expiry:
-            self._otp_code = None
-            self._otp_expiry = None
-            return False
-        return secrets.compare_digest(otp, self._otp_code)
+        mobile = self.get_mobile()
+        return self.otp_service.verify_sms_otp(mobile, self._session_info, otp)
 
     def reset_pin(self, otp: str, new_pin: str) -> None:
         if not self.verify_otp(otp):
@@ -69,8 +67,7 @@ class AuthManager:
         data["pin_salt"] = salt
         data["pin_hash"] = self._hash_pin(new_pin, salt)
         save_json(self.auth_file, data)
-        self._otp_code = None
-        self._otp_expiry = None
+        self._session_info = None
 
     def get_mobile(self) -> str:
         return load_json(self.auth_file, {}).get("mobile", "")

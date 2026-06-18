@@ -134,11 +134,15 @@ class SettingsScreen(QWidget):
 
     def _request_otp(self) -> None:
         try:
-            otp = self.controller.auth_manager.generate_otp()
+            self.controller.auth_manager.send_otp()
         except AuthError as error:
             QMessageBox.critical(self, "File Guard", str(error))
             return
-        QMessageBox.information(self, "OTP Generated", f"Simulated OTP:\n{otp}")
+        QMessageBox.information(
+            self,
+            "OTP Sent",
+            "A verification code has been sent to your registered mobile number via SMS.",
+        )
         self.otp_widget.clear_all()
 
     def _reset_pin(self) -> None:

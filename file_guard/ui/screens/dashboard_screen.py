@@ -34,11 +34,19 @@ class DashboardScreen(QWidget):
         stats_row = QHBoxLayout()
         stats_row.setSpacing(12)
         self.files_card = StatCard("Files Monitored", "0")
+        self.added_card = StatCard("Files Added", "0")
         self.changes_card = StatCard("Changes Detected", "0", "modified / deleted / added")
         self.low_card = StatCard("Low Risk", "0")
         self.medium_card = StatCard("Medium Risk", "0")
         self.high_card = StatCard("High Risk", "0")
-        for card in [self.files_card, self.changes_card, self.low_card, self.medium_card, self.high_card]:
+        for card in [
+            self.files_card,
+            self.added_card,
+            self.changes_card,
+            self.low_card,
+            self.medium_card,
+            self.high_card,
+        ]:
             stats_row.addWidget(card)
         layout.addLayout(stats_row)
 
@@ -97,6 +105,7 @@ class DashboardScreen(QWidget):
     def refresh(self) -> None:
         stats = self.controller.get_stats()
         self.files_card.set_value(str(stats["total_files"]))
+        self.added_card.set_value(str(stats["added"]))
         self.changes_card.set_value(
             str(stats["total_changes"]),
             f"{stats['modified']} modified · {stats['deleted']} deleted · {stats['added']} added",

@@ -24,5 +24,8 @@ Desktop.ini
 # Local app data (user-specific, not project source)
 .file_guard/
 
+# Secrets
+.env
+
 # Generated reports in project dir (if any)
 *.log
