@@ -7,7 +7,6 @@ File Guard is a cross-platform File Integrity Monitoring System for Windows and 
 - PIN-based authentication with first-time registration
 - Mobile number capture for OTP-based PIN reset
 - Real SMS OTP via Firebase (10,000 free/month)
-- Auto-tab OTP input fields
 - File and folder monitoring with recursive scans
 - Detects modified, deleted, and newly added files/folders
 - User-selectable hashing: MD5, SHA-1, or SHA-256
@@ -15,7 +14,6 @@ File Guard is a cross-platform File Integrity Monitoring System for Windows and 
 - JSONL and text logging
 - Risk classification for detected changes
 - Text and PDF report generation
-- Dark mode and light mode toggle
 
 ## Technology
 
