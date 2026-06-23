@@ -57,7 +57,7 @@ File Guard/
 └── generate_final_report.py
 ```
 
-## Real SMS OTP Setup (Firebase)(Need to buy subscription)
+## Real SMS OTP Setup (Firebase)(Need to Buy Subscription)
 
 ### Step 1: Create Firebase Project
 1. Go to [Firebase Console](https://console.firebase.google.com/)
