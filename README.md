@@ -57,9 +57,7 @@ File Guard/
 └── generate_final_report.py
 ```
 
-## Real SMS OTP Setup (Firebase)
-
-Firebase provides **10,000 free SMS OTP verifications per month** (then ~$0.05 per verification).
+## Real SMS OTP Setup (Firebase)(Need to buy subscription)
 
 ### Step 1: Create Firebase Project
 1. Go to [Firebase Console](https://console.firebase.google.com/)
