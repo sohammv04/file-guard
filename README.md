@@ -118,7 +118,7 @@ pip install -r requirements.txt
 ### Windows
 
 ```powershell
-cd "c:\Users\SOHAM PHATAK\Desktop\Projects\File Guard"
+cd "<path-to-File-Guard>"
 python -m pip install -r requirements.txt
 python main.py
 ```
@@ -165,13 +165,13 @@ OTP is sent via **Firebase SMS** to the registered mobile number. Configure `.en
 ## Generate the documentation PDF
 
 ```powershell
-cd "c:\Users\SOHAM PHATAK\Desktop\Projects\File Guard"
+cd "<path-to-File-Guard>"
 python generate_final_report.py
 ```
 
 This creates:
 
-- `c:\Users\SOHAM PHATAK\Desktop\Projects\File Guard\FINAL_REPORT.pdf`
+- `<path-to-File-Guard>\FINAL_REPORT.pdf`
 
 ## Recommended validation
 

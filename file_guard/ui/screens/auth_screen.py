@@ -87,9 +87,9 @@ class AuthScreen(QWidget):
 
         brand = QLabel(self.controller.app_name)
         brand.setObjectName("brandLabel")
-        header = ScreenHeader("Secure Access", "Register or sign in with your PIN to continue.")
+        self.header = ScreenHeader("Secure Access", "Register or sign in with your PIN to continue.")
         card_layout.addWidget(brand)
-        card_layout.addWidget(header)
+        card_layout.addWidget(self.header)
 
         self.mobile_input = QLineEdit()
         self.mobile_input.setPlaceholderText("Email address")
@@ -142,10 +142,21 @@ class AuthScreen(QWidget):
 
     def _sync_state(self) -> None:
         registered = self.controller.auth_manager.is_registered()
-        self.confirm_label.setText("New PIN" if registered else "Confirm PIN")
-        self.confirm_pin_input.setPlaceholderText("New PIN" if registered else "Confirm PIN")
+        # Update header to reflect the correct mode
+        if registered:
+            self.header.title_label.setText("Welcome Back")
+            self.header.set_subtitle("Enter your PIN to continue.")
+        else:
+            self.header.title_label.setText("Secure Access")
+            self.header.set_subtitle("Create your account to get started.")
+        # Confirm PIN / New PIN field — only used for PIN reset via OTP
+        self.confirm_label.setText("New PIN")
+        self.confirm_pin_input.setPlaceholderText("New PIN")
+        # OTP fields only shown when registered (for PIN reset)
         self.otp_widget.setVisible(registered)
         self.otp_label.setVisible(registered)
+        self.confirm_label.setVisible(registered)
+        self.confirm_pin_input.setVisible(registered)
         self.register_button.setVisible(not registered)
         self.login_button.setVisible(registered)
         self.request_otp_button.setVisible(registered)
@@ -178,27 +189,35 @@ class AuthScreen(QWidget):
         self._error("Incorrect PIN.")
 
     def _show_qr(self) -> None:
-        """Re-display the QR code (for rescanning the authenticator)."""
+        """Re-display the QR code and activate the OTP session for PIN reset."""
         uri = self.controller.auth_manager.get_totp_uri()
         if uri:
             dlg = QRCodeDialog(uri, self)
             dlg.exec()
-        # Also activate the OTP session so Reset PIN works
+        # Activate the OTP session — user must now enter the code from their app
         try:
             self.controller.auth_manager.send_otp()
         except AuthError:
             pass
+        QMessageBox.information(
+            self,
+            "Authenticator Ready",
+            "Open your authenticator app and enter the 6-digit code shown for File Guard,\n"
+            "then enter your new PIN and click \"Reset PIN\".",
+        )
 
     def _reset_pin(self) -> None:
-        # Activate OTP session if not already active
-        try:
-            self.controller.auth_manager.send_otp()
-        except AuthError as error:
-            self._error(str(error))
+        """Reset PIN using a valid TOTP code — session must be pre-activated via Show QR Code."""
+        otp_code = self.otp_widget.value()
+        if len(otp_code) < OTP_LENGTH:
+            self._error(
+                f"Please enter the full {OTP_LENGTH}-digit code from your authenticator app.\n"
+                "Click \"Show QR Code\" first to activate the session."
+            )
             return
         try:
             self.controller.auth_manager.reset_pin(
-                self.otp_widget.value(),
+                otp_code,
                 self.confirm_pin_input.text().strip(),
             )
         except AuthError as error:

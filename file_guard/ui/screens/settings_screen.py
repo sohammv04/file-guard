@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import (
     QComboBox,
     QHBoxLayout,
@@ -7,6 +8,7 @@ from PyQt6.QtWidgets import (
     QLineEdit,
     QMessageBox,
     QPushButton,
+    QScrollArea,
     QVBoxLayout,
     QWidget,
 )
@@ -23,10 +25,25 @@ class SettingsScreen(QWidget):
         super().__init__(parent)
         self.controller = controller
 
-        layout = QVBoxLayout(self)
-        layout.setContentsMargins(24, 24, 24, 24)
+        # Outer layout holds the header and the scroll area
+        outer_layout = QVBoxLayout(self)
+        outer_layout.setContentsMargins(24, 24, 24, 24)
+        outer_layout.setSpacing(16)
+        outer_layout.addWidget(ScreenHeader("Settings & Account", "Manage credentials, theme, and application info."))
+
+        # Scroll area so cards never overlap when window is too small
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
+        scroll.setFrameShape(QScrollArea.Shape.NoFrame)
+        scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        outer_layout.addWidget(scroll)
+
+        # Inner container that actually holds all the cards
+        inner = QWidget()
+        scroll.setWidget(inner)
+        layout = QVBoxLayout(inner)
+        layout.setContentsMargins(0, 0, 8, 0)
         layout.setSpacing(16)
-        layout.addWidget(ScreenHeader("Settings & Account", "Manage credentials, theme, and application info."))
 
         pin_card = make_card("Change PIN")
         pin_layout = pin_card.layout()
@@ -140,8 +157,9 @@ class SettingsScreen(QWidget):
             return
         QMessageBox.information(
             self,
-            "OTP Sent",
-            "A verification code has been sent to your registered mobile number via SMS.",
+            "Authenticator Ready",
+            "Open your authenticator app and enter the 6-digit code shown for File Guard,\n"
+            "then enter your new PIN and click \"Reset PIN\".",
         )
         self.otp_widget.clear_all()
 

@@ -9,15 +9,26 @@ QMainWindow, QWidget#rootWidget, QWidget#contentArea {
     background-color: %(bg)s;
     color: %(text)s;
 }
+QWidget {
+    color: %(text)s;
+}
 QFrame#card, QFrame#statCard {
     background-color: %(card)s;
     border: 1px solid %(border)s;
     border-radius: 12px;
 }
+QFrame#card QLabel, QFrame#statCard QLabel {
+    color: %(text)s;
+    background-color: transparent;
+}
 QFrame#alertAdded {
     background-color: %(added_bg)s;
     border: 1px solid %(added_border)s;
     border-radius: 12px;
+}
+QFrame#alertAdded QLabel {
+    color: %(text)s;
+    background-color: transparent;
 }
 QLabel#screenTitle {
     font-size: 24px;
@@ -31,7 +42,7 @@ QLabel#screenSubtitle, QLabel#statSubtitle {
 QLabel#cardTitle, QLabel#statTitle {
     font-size: 20px;
     font-weight: 600;
-    color: %(muted)s;
+    color: %(text)s;
 }
 QLabel#statValue {
     font-size: 24px;
@@ -184,23 +195,23 @@ QStatusBar {
 """
 
 _LIGHT = {
-    "bg": "#eef1f6",
-    "text": "#1a2332",
-    "muted": "#5c6b7f",
+    "bg": "#e8ecf2",
+    "text": "#0f1923",
+    "muted": "#3d4f63",
     "card": "#ffffff",
-    "border": "#d5dde8",
-    "input": "#ffffff",
-    "sidebar": "#f8fafc",
-    "accent": "#2563eb",
-    "accent_hover": "#1d4ed8",
+    "border": "#aab4c4",
+    "input": "#f0f3f7",
+    "sidebar": "#f0f4f8",
+    "accent": "#1a56db",
+    "accent_hover": "#1e40af",
     "accent_text": "#ffffff",
-    "disabled": "#c7d2e0",
-    "nav_hover": "#e8edf5",
-    "nav_active": "#e0eaff",
-    "pill_bg": "#e2e8f0",
-    "pill_text": "#475569",
-    "added_bg": "#e3f2fd",
-    "added_border": "#64b5f6",
+    "disabled": "#b0bccb",
+    "nav_hover": "#dce4ef",
+    "nav_active": "#d0e0ff",
+    "pill_bg": "#cdd5e0",
+    "pill_text": "#2d3d52",
+    "added_bg": "#dbeafe",
+    "added_border": "#3b82f6",
 }
 
 _DARK = {

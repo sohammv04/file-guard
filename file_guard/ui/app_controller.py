@@ -40,10 +40,10 @@ class AppController(QObject):
         self.monitor_worker: MonitorWorker | None = None
 
     def get_user_label(self) -> str:
-        mobile = self.auth_manager.get_mobile()
-        if not mobile:
+        email = self.auth_manager.get_email()
+        if not email:
             return "Guest"
-        return f"+{mobile[-10:]}"
+        return email
 
     def login(self, pin: str) -> bool:
         if self.auth_manager.verify_pin(pin):
